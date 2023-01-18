@@ -1,3 +1,4 @@
+import { ApplicationContainer } from "@/components/ApplicationContainer";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProps } from "next/app";
@@ -27,7 +28,9 @@ export default function App(props: AppProps) {
         }}
       >
         <QueryClientProvider client={queryClient}>
-          <Component {...pageProps} />
+          <ApplicationContainer>
+            <Component {...pageProps} />
+          </ApplicationContainer>
         </QueryClientProvider>
       </MantineProvider>
     </>
