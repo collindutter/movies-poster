@@ -14,8 +14,14 @@ import {
   Button,
   Group,
   useMantineTheme,
+  Center,
+  AspectRatio,
 } from "@mantine/core";
+import { Responsive, WidthProvider } from "react-grid-layout";
+
 import { parse } from "papaparse";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 interface LetterboxdFilm {
   Date: string;
@@ -30,6 +36,17 @@ interface Film {
   name: string;
   year: string;
 }
+
+const MAX_COLS = 10;
+const ROW_HEIGHT = 75;
+const FILM_WIDTH = 1;
+const FILM_HEIGHT = 3;
+const MIN_FILM_WIDTH = 1;
+const MAX_FILM_WIDTH = 2;
+const MIN_FILM_HEIGHT = 3;
+const MAX_FILM_HEIGHT = 6;
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 /**
  * Clean dirty film from CSV parse to pristine film ready for API.
@@ -119,44 +136,48 @@ export default function Films(props: any) {
           </div>
         </Group>
       </Dropzone>
-      {films.map((film, index) => (
-        <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
-          <Card.Section>
-            <Image
-              src="https://images.unsplash.com/photo-1527004013197-933c4bb611b3?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=720&q=80"
-              height={160}
-              alt="Norway"
-            />
-          </Card.Section>
-
-          <Group position="apart" mt="md" mb="xs">
-            <Text weight={500}>{film.name}</Text>
-            <Badge color="pink" variant="light">
-              On Sale
-            </Badge>
-          </Group>
-
-          <Text size="sm" color="dimmed">
-            With Fjord Tours you can explore more of the magical fjord
-            landscapes with tours and activities on and around the fjords of
-            Norway
-          </Text>
-
-          <Button
-            variant="light"
-            color="blue"
-            fullWidth
-            mt="md"
+      <ResponsiveGridLayout
+        className="layout"
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+        cols={{
+          lg: MAX_COLS,
+          md: MAX_COLS,
+          sm: MAX_COLS,
+          xs: MAX_COLS,
+          xxs: MAX_COLS,
+        }}
+        rowHeight={ROW_HEIGHT}
+      >
+        {films.map((film, index) => (
+          <Card
+            key={index}
+            shadow="sm"
+            p="lg"
             radius="md"
-            component="a"
-            target="_blank"
-            rel="noopener noreferrer"
-            href={film.letterboxdUri}
+            withBorder
+            data-grid={{
+              i: index,
+              x: (index % MAX_COLS) * FILM_WIDTH,
+              y: Math.floor(index / MAX_COLS),
+              w: FILM_WIDTH,
+              h: FILM_HEIGHT,
+              minW: MIN_FILM_WIDTH,
+              maxW: MAX_FILM_WIDTH,
+              minH: MIN_FILM_HEIGHT,
+              maxH: MAX_FILM_HEIGHT,
+            }}
           >
-            View On Letterboxd
-          </Button>
-        </Card>
-      ))}
+            <Card.Section>
+              <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
+                <Image
+                  src="https://images.unsplash.com/photo-1527118732049-c88155f2107c?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=720&q=80"
+                  alt="Panda"
+                />
+              </AspectRatio>
+            </Card.Section>
+          </Card>
+        ))}
+      </ResponsiveGridLayout>
     </>
   );
 }
