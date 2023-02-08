@@ -1,3 +1,16 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "next/core-web-vitals",
+    "plugin:jsdoc/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "jsdoc"],
+  "root": true,
+  "settings": {
+    "jsdoc": {
+      "mode": "typescript"
+    }
+  }
 }

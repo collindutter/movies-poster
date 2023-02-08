@@ -1,41 +1,22 @@
-import { IconUpload, IconMovie, IconX } from "@tabler/icons";
 import {
-  Dropzone,
-  DropzoneProps,
-  FileWithPath,
-  MIME_TYPES,
-} from "@mantine/dropzone";
-import { useState } from "react";
-import {
+  AspectRatio,
   Card,
+  Group,
   Image,
   Text,
-  Badge,
-  Button,
-  Group,
   useMantineTheme,
-  Center,
-  AspectRatio,
 } from "@mantine/core";
+import { Dropzone, FileWithPath, MIME_TYPES } from "@mantine/dropzone";
+import { IconMovie, IconUpload, IconX } from "@tabler/icons";
+import React, { useState } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 
+import { postPoster } from "@/api/poster";
+import { LetterboxdMovie, Movie, TmdbMovie } from "@/api/types";
+import { QueryClient, useMutation } from "@tanstack/react-query";
 import { parse } from "papaparse";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-
-interface LetterboxdFilm {
-  Date: string;
-  "LetterBoxd URI": string;
-  Name: string;
-  Year: string;
-}
-
-interface Film {
-  date: string;
-  letterboxdUri: string;
-  name: string;
-  year: string;
-}
 
 const MAX_COLS = 10;
 const ROW_HEIGHT = 75;
@@ -47,13 +28,15 @@ const MIN_FILM_HEIGHT = 3;
 const MAX_FILM_HEIGHT = 6;
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
+const queryClient = new QueryClient();
 
 /**
  * Clean dirty film from CSV parse to pristine film ready for API.
- * @param dirtyFilm dirty film parsed from CSV
- * @returns cleaned film
+ *
+ * @param {LetterboxdMovie} dirtyFilm dirty film parsed from CSV
+ * @returns {Movie} cleaned film
  */
-const cleanFilm = (dirtyFilm: LetterboxdFilm): Film => {
+const cleanFilm = (dirtyFilm: LetterboxdMovie): Movie => {
   return Object.entries(dirtyFilm).reduce((acc, [key, value]) => {
     let cleanedKey = key.toLowerCase();
 
@@ -64,16 +47,30 @@ const cleanFilm = (dirtyFilm: LetterboxdFilm): Film => {
     acc[cleanedKey] = value;
 
     return acc;
-  }, {} as any) as Film;
+  }, {} as any) as Movie;
 };
 
-export default function Films(props: any) {
+/**
+ * Component for listing films
+ *
+ * @returns {React.ReactElement} react component
+ */
+export default function Films() {
   const theme = useMantineTheme();
-  const [films, setFilms] = useState<Film[]>([]);
+  const [films, setFilms] = useState<TmdbMovie[]>([]);
+
+  const mutation = useMutation({
+    mutationFn: postPoster,
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
 
   /**
    * Parse the first CSV file uploaded to the dropzone.
-   * @param files list of files uploaded to dropzone
+   *
+   * @param {FileWithPath[]} files  list of files uploaded to dropzone
    */
   const parseCsv = (files: FileWithPath[]) => {
     console.log(files);
@@ -85,7 +82,11 @@ export default function Films(props: any) {
       },
       complete: (results) => {
         console.log(results);
-        setFilms(results.data.map((film) => cleanFilm(film as LetterboxdFilm)));
+        const cleanedFilms = results.data.map((film) =>
+          cleanFilm(film as LetterboxdMovie)
+        );
+        mutation.mutate(cleanedFilms);
+        setFilms(mutation.data);
         console.log(films);
       },
     });
@@ -170,7 +171,7 @@ export default function Films(props: any) {
             <Card.Section>
               <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
                 <Image
-                  src="https://images.unsplash.com/photo-1527118732049-c88155f2107c?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=720&q=80"
+                  src={`https://image.tmdb.org/t/p/original/${film.poster_path}`}
                   alt="Panda"
                 />
               </AspectRatio>
@@ -180,10 +181,4 @@ export default function Films(props: any) {
       </ResponsiveGridLayout>
     </>
   );
-}
-
-export async function getServerSideProps() {
-  return {
-    props: {}, // will be passed to the page component as props
-  };
 }
