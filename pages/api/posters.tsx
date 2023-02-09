@@ -1,6 +1,16 @@
 import { searchMovie } from "@/api/tmdb";
 import { Movie, Poster } from "@/api/types";
 import { NextApiRequest, NextApiResponse } from "next";
+import { Layout } from "react-grid-layout";
+import { v1 } from "uuid";
+
+const MAX_COLS = 10;
+const FILM_WIDTH = 1;
+const FILM_HEIGHT = 3;
+const MIN_FILM_WIDTH = 1;
+const MAX_FILM_WIDTH = 2;
+const MIN_FILM_HEIGHT = 3;
+const MAX_FILM_HEIGHT = 6;
 
 /**
  * Create a poster from letterboxd movies.
@@ -19,16 +29,27 @@ async function createPoster(movies: Movie[]): Promise<Poster> {
       })
   );
 
+  const layout = posterMovies.map((_movie, index) => {
+    return {
+      i: `${index}`,
+      x: (index % MAX_COLS) * FILM_WIDTH,
+      y: Math.floor(index / MAX_COLS),
+      w: FILM_WIDTH,
+      h: FILM_HEIGHT,
+      minW: MIN_FILM_WIDTH,
+      maxW: MAX_FILM_WIDTH,
+      minH: MIN_FILM_HEIGHT,
+      maxH: MAX_FILM_HEIGHT,
+    } as Layout;
+  });
+
   const poster: Poster = {
+    id: v1(),
     movies: posterMovies,
-    layout: {},
+    layout,
   };
 
   return poster;
-}
-
-async function getPosters() {
-  
 }
 
 /**

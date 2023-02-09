@@ -1,3 +1,5 @@
+import { Layout } from "react-grid-layout";
+
 export interface LetterboxdMovie {
   Date: string;
   "LetterBoxd URI": string;
@@ -30,6 +32,7 @@ export interface TmdbMovie {
 }
 
 export interface Poster {
+  id: string;
   movies: TmdbMovie[];
-  layout: unknown;
+  layout: Layout[];
 }

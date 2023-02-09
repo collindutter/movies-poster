@@ -8,27 +8,28 @@ import {
 } from "@mantine/core";
 import { Dropzone, FileWithPath, MIME_TYPES } from "@mantine/dropzone";
 import { IconMovie, IconUpload, IconX } from "@tabler/icons";
-import React, { useState } from "react";
-import { Responsive, WidthProvider } from "react-grid-layout";
+import React from "react";
+import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 
-import { postPoster } from "@/api/poster";
-import { LetterboxdMovie, Movie, TmdbMovie } from "@/api/types";
-import { QueryClient, useMutation } from "@tanstack/react-query";
+import { getPosters, patchPoster, postPoster } from "@/api/poster";
+import { LetterboxdMovie, Movie, Poster, TmdbMovie } from "@/api/types";
+import { QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { parse } from "papaparse";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const MAX_COLS = 10;
+const MAX_FILE_SIZE = 3 * 1024 ** 2; // 5 MB
 const ROW_HEIGHT = 75;
-const FILM_WIDTH = 1;
-const FILM_HEIGHT = 3;
-const MIN_FILM_WIDTH = 1;
-const MAX_FILM_WIDTH = 2;
-const MIN_FILM_HEIGHT = 3;
-const MAX_FILM_HEIGHT = 6;
+const MAX_COLS = 10;
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const queryClient = new QueryClient();
+
+interface PatchMutationParameters {
+  id: string;
+  layout?: Layout[];
+  movies?: TmdbMovie[];
+}
 
 /**
  * Clean dirty film from CSV parse to pristine film ready for API.
@@ -44,9 +45,11 @@ const cleanFilm = (dirtyFilm: LetterboxdMovie): Movie => {
     if (cleanedKey === "letterboxd uri") {
       cleanedKey = "letterboxdUri";
     }
+
     acc[cleanedKey] = value;
 
     return acc;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, {} as any) as Movie;
 };
 
@@ -55,15 +58,31 @@ const cleanFilm = (dirtyFilm: LetterboxdMovie): Movie => {
  *
  * @returns {React.ReactElement} react component
  */
-export default function Films() {
+export default function Films(): React.ReactElement {
   const theme = useMantineTheme();
-  const [films, setFilms] = useState<TmdbMovie[]>([]);
+  const { data: posters } = useQuery<Poster[]>({
+    queryKey: ["posters"],
+    queryFn: getPosters,
+  });
 
-  const mutation = useMutation({
+  const mainPoster = posters ? posters[0] : undefined;
+
+  const postMutation = useMutation({
     mutationFn: postPoster,
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+
+  const patchMutation = useMutation({
+    mutationFn: ({ id, layout }: PatchMutationParameters) =>
+      patchPoster(id, { layout }),
+    onSuccess: () => {
+      // Invalidate and refetch
+      if (mainPoster) {
+        queryClient.invalidateQueries({ queryKey: ["posts", mainPoster.id] });
+      }
     },
   });
 
@@ -74,22 +93,24 @@ export default function Films() {
    */
   const parseCsv = (files: FileWithPath[]) => {
     console.log(files);
-    parse(files[0], {
+    const firstFile = files[0];
+
+    parse(firstFile, {
       worker: true,
       header: true,
-      error: (err: any, file: any, inputElem: any, reason: any) => {
-        console.error({ err, file, inputElem, reason });
-      },
       complete: (results) => {
-        console.log(results);
         const cleanedFilms = results.data.map((film) =>
           cleanFilm(film as LetterboxdMovie)
         );
-        mutation.mutate(cleanedFilms);
-        setFilms(mutation.data);
-        console.log(films);
+        postMutation.mutate(cleanedFilms);
       },
     });
+  };
+
+  const savePosterLayout = (layout: Layout[]) => {
+    if (mainPoster) {
+      patchMutation.mutate({ id: mainPoster.id, layout });
+    }
   };
 
   return (
@@ -97,7 +118,7 @@ export default function Films() {
       <Dropzone
         onDrop={(files) => parseCsv(files)}
         onReject={(files) => console.log("rejected files", files)}
-        maxSize={3 * 1024 ** 2}
+        maxSize={MAX_FILE_SIZE}
         accept={[MIME_TYPES.csv]}
       >
         <Group
@@ -137,48 +158,39 @@ export default function Films() {
           </div>
         </Group>
       </Dropzone>
-      <ResponsiveGridLayout
-        className="layout"
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{
-          lg: MAX_COLS,
-          md: MAX_COLS,
-          sm: MAX_COLS,
-          xs: MAX_COLS,
-          xxs: MAX_COLS,
-        }}
-        rowHeight={ROW_HEIGHT}
-      >
-        {films.map((film, index) => (
-          <Card
-            key={index}
-            shadow="sm"
-            p="lg"
-            radius="md"
-            withBorder
-            data-grid={{
-              i: index,
-              x: (index % MAX_COLS) * FILM_WIDTH,
-              y: Math.floor(index / MAX_COLS),
-              w: FILM_WIDTH,
-              h: FILM_HEIGHT,
-              minW: MIN_FILM_WIDTH,
-              maxW: MAX_FILM_WIDTH,
-              minH: MIN_FILM_HEIGHT,
-              maxH: MAX_FILM_HEIGHT,
-            }}
-          >
-            <Card.Section>
-              <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
-                <Image
-                  src={`https://image.tmdb.org/t/p/original/${film.poster_path}`}
-                  alt="Panda"
-                />
-              </AspectRatio>
-            </Card.Section>
-          </Card>
-        ))}
-      </ResponsiveGridLayout>
+      {mainPoster ? (
+        <ResponsiveGridLayout
+          className="layout"
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{
+            lg: MAX_COLS,
+            md: MAX_COLS,
+            sm: MAX_COLS,
+            xs: MAX_COLS,
+            xxs: MAX_COLS,
+          }}
+          rowHeight={ROW_HEIGHT}
+          layouts={{ lg: mainPoster.layout }}
+          onLayoutChange={(currentLayout: Layout[]) =>
+            savePosterLayout(currentLayout)
+          }
+        >
+          {mainPoster.movies.map((movie, index) => (
+            <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
+              <Card.Section>
+                <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
+                  <Image
+                    src={`https://image.tmdb.org/t/p/original/${movie.poster_path}`}
+                    alt="Panda"
+                  />
+                </AspectRatio>
+              </Card.Section>
+            </Card>
+          ))}
+        </ResponsiveGridLayout>
+      ) : (
+        <></>
+      )}
     </>
   );
 }
