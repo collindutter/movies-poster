@@ -3,6 +3,9 @@ import { Movie, Poster } from "@/api/types";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Layout } from "react-grid-layout";
 import { v1 } from "uuid";
+import pLimit from "p-limit";
+
+const limit = pLimit(10);
 
 const MAX_COLS = 10;
 const FILM_WIDTH = 1;
@@ -25,7 +28,7 @@ async function createPoster(movies: Movie[]): Promise<Poster> {
       .map(async (movie) => {
         const { results: movies } = await searchMovie(movie.name);
 
-        return movies[0];
+        return limit(() => movies[0]);
       })
   );
 

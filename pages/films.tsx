@@ -66,12 +66,12 @@ export default function Films(): React.ReactElement {
   });
 
   const mainPoster = posters ? posters[0] : undefined;
+  console.log(mainPoster);
 
   const postMutation = useMutation({
     mutationFn: postPoster,
     onSuccess: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["posters"] });
     },
   });
 
@@ -79,9 +79,8 @@ export default function Films(): React.ReactElement {
     mutationFn: ({ id, layout }: PatchMutationParameters) =>
       patchPoster(id, { layout }),
     onSuccess: () => {
-      // Invalidate and refetch
       if (mainPoster) {
-        queryClient.invalidateQueries({ queryKey: ["posts", mainPoster.id] });
+        queryClient.invalidateQueries({ queryKey: ["posters", mainPoster.id] });
       }
     },
   });
