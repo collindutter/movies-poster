@@ -37,7 +37,6 @@ async function getPosters(): Promise<Poster[]> {
   return response.data;
   */
 
-  console.log("Getting posters")
   const posters = Object.keys(localStorage)
     .filter((key) => key.startsWith("poster"))
     .map((posterKey) => localStorage.getItem(posterKey))
@@ -60,7 +59,6 @@ async function postPoster(movies: Movie[]): Promise<Poster> {
   const poster = response.data;
 
   localStorage.setItem(`poster-${poster.id}`, JSON.stringify(poster));
-  console.log("Created poster")
 
   return response.data;
 }
@@ -121,7 +119,16 @@ async function patchPoster(
   }
 
   const poster = JSON.parse(posterStr) as Poster;
-  const patchedPoster = { ...poster, ...patchData };
+  console.log({ poster });
+  console.log({ patchData });
+  const patchedPoster = { ...poster };
+  if (patchData.movies) {
+    patchedPoster.movies = patchData.movies;
+  }
+  if (patchData.layout) {
+    patchedPoster.layout = patchData.layout;
+  }
+  console.log({ patchedPoster });
 
   localStorage.setItem(`poster-${posterId}`, JSON.stringify(patchedPoster));
 

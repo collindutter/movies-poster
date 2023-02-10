@@ -1,19 +1,30 @@
 import {
+  ActionIcon,
   AspectRatio,
   Card,
   Group,
   Image,
+  Menu,
+  Switch,
   Text,
   useMantineTheme,
 } from "@mantine/core";
 import { Dropzone, FileWithPath, MIME_TYPES } from "@mantine/dropzone";
-import { IconMovie, IconUpload, IconX } from "@tabler/icons";
-import React from "react";
+import {
+  IconDots,
+  IconEye,
+  IconFileZip,
+  IconMovie,
+  IconTrash,
+  IconUpload,
+  IconX,
+} from "@tabler/icons";
+import React, { useState } from "react";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 
 import { getPosters, patchPoster, postPoster } from "@/api/poster";
 import { LetterboxdMovie, Movie, Poster, TmdbMovie } from "@/api/types";
-import { QueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parse } from "papaparse";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -23,7 +34,6 @@ const ROW_HEIGHT = 75;
 const MAX_COLS = 10;
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
-const queryClient = new QueryClient();
 
 interface PatchMutationParameters {
   id: string;
@@ -60,10 +70,12 @@ const cleanFilm = (dirtyFilm: LetterboxdMovie): Movie => {
  */
 export default function Films(): React.ReactElement {
   const theme = useMantineTheme();
+  const queryClient = useQueryClient();
   const { data: posters } = useQuery<Poster[]>({
     queryKey: ["posters"],
     queryFn: getPosters,
   });
+  const [previewMode, setPreviewMode] = useState(false);
 
   const mainPoster = posters ? posters[0] : undefined;
   console.log(mainPoster);
@@ -76,8 +88,8 @@ export default function Films(): React.ReactElement {
   });
 
   const patchMutation = useMutation({
-    mutationFn: ({ id, layout }: PatchMutationParameters) =>
-      patchPoster(id, { layout }),
+    mutationFn: ({ id, layout, movies }: PatchMutationParameters) =>
+      patchPoster(id, { layout, movies }),
     onSuccess: () => {
       if (mainPoster) {
         queryClient.invalidateQueries({ queryKey: ["posters", mainPoster.id] });
@@ -91,7 +103,6 @@ export default function Films(): React.ReactElement {
    * @param {FileWithPath[]} files  list of files uploaded to dropzone
    */
   const parseCsv = (files: FileWithPath[]) => {
-    console.log(files);
     const firstFile = files[0];
 
     parse(firstFile, {
@@ -106,9 +117,30 @@ export default function Films(): React.ReactElement {
     });
   };
 
+  /**
+   * Save poster layout.
+   *
+   * @param {Layout[]} layout grid layouts
+   */
   const savePosterLayout = (layout: Layout[]) => {
     if (mainPoster) {
       patchMutation.mutate({ id: mainPoster.id, layout });
+    }
+  };
+
+  /**
+   * Remove a movie from poster.
+   *
+   * @param {number} index index of movie to remove from poster
+   */
+  const removeMovie = (index: number) => {
+    if (mainPoster) {
+      const movies = mainPoster.movies;
+      const layout = mainPoster.layout;
+      movies.splice(index, 1);
+      layout.splice(index, 1);
+
+      patchMutation.mutate({ id: mainPoster.id, movies, layout });
     }
   };
 
@@ -157,7 +189,12 @@ export default function Films(): React.ReactElement {
           </div>
         </Group>
       </Dropzone>
-      {mainPoster ? (
+      <Switch
+        label="Preview Mode"
+        checked={previewMode}
+        onChange={(event) => setPreviewMode(event.currentTarget.checked)}
+      />
+      {mainPoster && (
         <ResponsiveGridLayout
           className="layout"
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -176,6 +213,29 @@ export default function Films(): React.ReactElement {
         >
           {mainPoster.movies.map((movie, index) => (
             <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
+              {!previewMode && (
+                <Card.Section withBorder inheritPadding py="xs">
+                  <Group position="apart">
+                    <Text weight={500}>{movie.title}</Text>
+                    <Menu withinPortal position="bottom-end" shadow="sm">
+                      <Menu.Target>
+                        <ActionIcon>
+                          <IconDots size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
+
+                      <Menu.Dropdown>
+                        <Menu.Item
+                          icon={<IconTrash size={14} />}
+                          onClick={() => removeMovie(index)}
+                        >
+                          Remove
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Group>
+                </Card.Section>
+              )}
               <Card.Section>
                 <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
                   <Image
@@ -187,8 +247,6 @@ export default function Films(): React.ReactElement {
             </Card>
           ))}
         </ResponsiveGridLayout>
-      ) : (
-        <></>
       )}
     </>
   );
