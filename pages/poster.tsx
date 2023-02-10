@@ -196,7 +196,7 @@ export default function PosterBuilder(): React.ReactElement {
               >
                 {modalMovieDetails?.images.posters.map((image, index) => (
                   <Carousel.Slide key={index}>
-                    <AspectRatio ratio={2 / 3} sx={{ maxWidth: 660 }} mx="auto">
+                    <AspectRatio ratio={2 / 3} sx={{ maxWidth: 600 }} mx="auto">
                       <Image
                         src={`https://image.tmdb.org/t/p/original${image.file_path}`}
                         alt={`${modalMovie.title} Image`}
@@ -310,7 +310,7 @@ export default function PosterBuilder(): React.ReactElement {
                 </Card.Section>
               )}
               <Card.Section>
-                <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
+                <AspectRatio ratio={2 / 3} sx={{ maxWidth: 600 }} mx="auto">
                   <Image
                     src={`https://image.tmdb.org/t/p/original/${movie.poster_path}`}
                     alt={`${movie.title} Image`}
