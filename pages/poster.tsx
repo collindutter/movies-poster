@@ -23,10 +23,12 @@ import {
 import React, { useState } from "react";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 
+import { getMovie, GetMovieResponse } from "@/api/movie";
 import { getPosters, patchPoster, postPoster } from "@/api/poster";
 import { LetterboxdMovie, Movie, Poster, TmdbMovie } from "@/api/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parse } from "papaparse";
+import { Carousel, Embla, useAnimationOffsetEffect } from "@mantine/carousel";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -65,11 +67,11 @@ const cleanFilm = (dirtyFilm: LetterboxdMovie): Movie => {
 };
 
 /**
- * Component for listing films
+ * Component for building a poster
  *
  * @returns {React.ReactElement} react component
  */
-export default function Films(): React.ReactElement {
+export default function PosterBuilder(): React.ReactElement {
   const theme = useMantineTheme();
   const queryClient = useQueryClient();
   const { data: posters } = useQuery<Poster[]>({
@@ -79,6 +81,11 @@ export default function Films(): React.ReactElement {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMovie, setModalMovie] = useState<TmdbMovie>();
+
+  const TRANSITION_DURATION = 200;
+  const [embla, setEmbla] = useState<Embla | null>(null);
+
+  useAnimationOffsetEffect(embla, TRANSITION_DURATION);
 
   const postMutation = useMutation({
     mutationFn: postPoster,
@@ -96,6 +103,13 @@ export default function Films(): React.ReactElement {
       }
     },
   });
+
+  const { data: modalMovieDetails } = useQuery<GetMovieResponse>({
+    queryKey: ["movie", modalMovie?.id],
+    queryFn: () => getMovie(modalMovie?.id || 0),
+    enabled: modalMovie !== undefined,
+  });
+  console.log(modalMovieDetails);
 
   const mainPoster = posters ? posters[0] : undefined;
 
@@ -167,11 +181,23 @@ export default function Films(): React.ReactElement {
         {modalMovie && (
           <Card shadow="sm" p="lg" radius="md" withBorder>
             <Card.Section>
-              <Image
-                width={600}
-                src={`https://image.tmdb.org/t/p/original/${modalMovie.poster_path}`}
-                alt={`${modalMovie.title} Image`}
-              />
+              <Carousel
+                sx={{ maxWidth: 600 }}
+                mx="auto"
+                withIndicators
+                height={900}
+                getEmblaApi={setEmbla}
+              >
+                {modalMovieDetails?.images.posters.map((image, index) => (
+                  <Carousel.Slide key={index}>
+                    <Image
+                      width={600}
+                      src={`https://image.tmdb.org/t/p/original${image.file_path}`}
+                      alt={`${modalMovie.title} Image`}
+                    />
+                  </Carousel.Slide>
+                ))}
+              </Carousel>
             </Card.Section>
           </Card>
         )}

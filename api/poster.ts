@@ -5,10 +5,10 @@ import { Movie, Poster, TmdbMovie } from "./types";
 /**
  * Get existing poster.
  *
- * @param {string} posterId id of existing poster
+ * @param {number} posterId id of existing poster
  * @returns {Promise<Poster>}  existing posters
  */
-async function getPoster(posterId: string): Promise<Poster> {
+async function getPoster(posterId: number): Promise<Poster> {
   /*
   const response = await moviesPosterApi.get<Poster>(`posters/${posterId}`);
 
