@@ -179,22 +179,29 @@ export default function PosterBuilder(): React.ReactElement {
         size="auto"
       >
         {modalMovie && (
-          <Card shadow="sm" p="lg" radius="md" withBorder>
-            <Card.Section>
+          <Card
+            shadow="sm"
+            p="lg"
+            radius="md"
+            withBorder
+            style={{ width: 600, height: 900 }}
+          >
+            <Card.Section style={{ display: "flex" }}>
               <Carousel
-                sx={{ maxWidth: 600 }}
+                height="100%"
+                sx={{ flex: 1 }}
                 mx="auto"
                 withIndicators
-                height={900}
                 getEmblaApi={setEmbla}
               >
                 {modalMovieDetails?.images.posters.map((image, index) => (
                   <Carousel.Slide key={index}>
-                    <Image
-                      width={600}
-                      src={`https://image.tmdb.org/t/p/original${image.file_path}`}
-                      alt={`${modalMovie.title} Image`}
-                    />
+                    <AspectRatio ratio={2 / 3} sx={{ maxWidth: 660 }} mx="auto">
+                      <Image
+                        src={`https://image.tmdb.org/t/p/original${image.file_path}`}
+                        alt={`${modalMovie.title} Image`}
+                      />
+                    </AspectRatio>
                   </Carousel.Slide>
                 ))}
               </Carousel>
