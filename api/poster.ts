@@ -119,8 +119,6 @@ async function patchPoster(
   }
 
   const poster = JSON.parse(posterStr) as Poster;
-  console.log({ poster });
-  console.log({ patchData });
   const patchedPoster = { ...poster };
   if (patchData.movies) {
     patchedPoster.movies = patchData.movies;
@@ -128,7 +126,6 @@ async function patchPoster(
   if (patchData.layout) {
     patchedPoster.layout = patchData.layout;
   }
-  console.log({ patchedPoster });
 
   localStorage.setItem(`poster-${posterId}`, JSON.stringify(patchedPoster));
 

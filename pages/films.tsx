@@ -5,15 +5,16 @@ import {
   Group,
   Image,
   Menu,
+  Modal,
   Switch,
   Text,
   useMantineTheme,
 } from "@mantine/core";
 import { Dropzone, FileWithPath, MIME_TYPES } from "@mantine/dropzone";
 import {
+  IconArrowsMove,
   IconDots,
-  IconEye,
-  IconFileZip,
+  IconEdit,
   IconMovie,
   IconTrash,
   IconUpload,
@@ -75,10 +76,9 @@ export default function Films(): React.ReactElement {
     queryKey: ["posters"],
     queryFn: getPosters,
   });
-  const [previewMode, setPreviewMode] = useState(false);
-
-  const mainPoster = posters ? posters[0] : undefined;
-  console.log(mainPoster);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMovie, setModalMovie] = useState<TmdbMovie>();
 
   const postMutation = useMutation({
     mutationFn: postPoster,
@@ -96,6 +96,8 @@ export default function Films(): React.ReactElement {
       }
     },
   });
+
+  const mainPoster = posters ? posters[0] : undefined;
 
   /**
    * Parse the first CSV file uploaded to the dropzone.
@@ -144,8 +146,36 @@ export default function Films(): React.ReactElement {
     }
   };
 
+  /**
+   * Open modal for movie.
+   *
+   * @param {TmdbMovie} movie movie to display in modal
+   */
+  const openMovieModal = (movie: TmdbMovie) => {
+    setModalMovie(movie);
+    setIsModalOpen(true);
+  };
+
   return (
     <>
+      <Modal
+        opened={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={modalMovie?.title}
+        size="auto"
+      >
+        {modalMovie && (
+          <Card shadow="sm" p="lg" radius="md" withBorder>
+            <Card.Section>
+              <Image
+                width={600}
+                src={`https://image.tmdb.org/t/p/original/${modalMovie.poster_path}`}
+                alt={`${modalMovie.title} Image`}
+              />
+            </Card.Section>
+          </Card>
+        )}
+      </Modal>
       <Dropzone
         onDrop={(files) => parseCsv(files)}
         onReject={(files) => console.log("rejected files", files)}
@@ -191,13 +221,16 @@ export default function Films(): React.ReactElement {
       </Dropzone>
       <Switch
         label="Preview Mode"
-        checked={previewMode}
-        onChange={(event) => setPreviewMode(event.currentTarget.checked)}
+        checked={isPreviewMode}
+        onChange={(event) => setIsPreviewMode(event.currentTarget.checked)}
       />
       {mainPoster && (
         <ResponsiveGridLayout
           className="layout"
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          isDraggable={!isPreviewMode}
+          isResizable={!isPreviewMode}
+          draggableHandle=".drag-handle"
           cols={{
             lg: MAX_COLS,
             md: MAX_COLS,
@@ -213,18 +246,25 @@ export default function Films(): React.ReactElement {
         >
           {mainPoster.movies.map((movie, index) => (
             <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
-              {!previewMode && (
+              {!isPreviewMode && (
                 <Card.Section withBorder inheritPadding py="xs">
                   <Group position="apart">
-                    <Text weight={500}>{movie.title}</Text>
+                    <IconArrowsMove className="drag-handle"></IconArrowsMove>
+
                     <Menu withinPortal position="bottom-end" shadow="sm">
                       <Menu.Target>
                         <ActionIcon>
-                          <IconDots size={16} />
+                          <IconDots />
                         </ActionIcon>
                       </Menu.Target>
 
                       <Menu.Dropdown>
+                        <Menu.Item
+                          icon={<IconEdit size={14} />}
+                          onClick={() => openMovieModal(movie)}
+                        >
+                          Edit
+                        </Menu.Item>
                         <Menu.Item
                           icon={<IconTrash size={14} />}
                           onClick={() => removeMovie(index)}
@@ -240,7 +280,7 @@ export default function Films(): React.ReactElement {
                 <AspectRatio ratio={2 / 3} sx={{ maxWidth: 352 }} mx="auto">
                   <Image
                     src={`https://image.tmdb.org/t/p/original/${movie.poster_path}`}
-                    alt="Panda"
+                    alt={`${movie.title} Image`}
                   />
                 </AspectRatio>
               </Card.Section>
