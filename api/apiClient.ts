@@ -9,7 +9,7 @@ const moviesPosterApi = axios.create({
 });
 
 const tmdbApiInterceptor = async (config: any) => {
-  config.params = { api_key: process.env.TMDB_API_KEY };
+  config.params = { ...config.params, api_key: process.env.TMDB_API_KEY };
 
   return config;
 };
