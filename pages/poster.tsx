@@ -3,6 +3,7 @@ import {
   AspectRatio,
   Button,
   Card,
+  Center,
   Flex,
   Group,
   Image,
@@ -14,7 +15,6 @@ import {
 } from "@mantine/core";
 import { Dropzone, FileWithPath, MIME_TYPES } from "@mantine/dropzone";
 import {
-  IconArrowsMove,
   IconDots,
   IconEdit,
   IconMovie,
@@ -28,15 +28,15 @@ import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 import { getMovie, GetMovieResponse } from "@/api/movie";
 import { getPosters, patchPoster, postPoster } from "@/api/poster";
 import { LetterboxdMovie, Movie, Poster, TmdbMovie } from "@/api/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { parse } from "papaparse";
 import { Carousel, Embla, useAnimationOffsetEffect } from "@mantine/carousel";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toPng } from "html-to-image";
+import { parse } from "papaparse";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { toPng } from "html-to-image";
 
 const MAX_FILE_SIZE = 3 * 1024 ** 2; // 5 MB
-const ROW_HEIGHT = 75;
+const ROW_HEIGHT = 70;
 const MAX_COLS = 10;
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -114,7 +114,6 @@ export default function PosterBuilder(): React.ReactElement {
     queryFn: () => getMovie(modalMovie?.id || 0),
     enabled: modalMovie !== undefined,
   });
-  console.log(modalMovieDetails);
 
   const mainPoster = posters ? posters[0] : undefined;
 
@@ -296,73 +295,81 @@ export default function PosterBuilder(): React.ReactElement {
         </Button>
       </Flex>
       {mainPoster && (
-        <div
-          id="poster-grid-layout"
-          ref={layoutRef}
-          style={{ backgroundColor: "rgb(48, 43, 47)" }}
-        >
-          <ResponsiveGridLayout
-            className="layout"
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            isDraggable={!isPreviewMode}
-            isResizable={!isPreviewMode}
-            draggableHandle=".drag-handle"
-            cols={{
-              lg: MAX_COLS,
-              md: MAX_COLS,
-              sm: MAX_COLS,
-              xs: MAX_COLS,
-              xxs: MAX_COLS,
+        <Center>
+          <div
+            id="poster-grid-layout"
+            ref={layoutRef}
+            style={{
+              width: 1648,
+              height: 2384,
+              backgroundColor: "rgb(48, 43, 47)",
             }}
-            rowHeight={ROW_HEIGHT}
-            layouts={{ lg: mainPoster.layout }}
-            onLayoutChange={(currentLayout: Layout[]) =>
-              savePosterLayout(currentLayout)
-            }
           >
-            {mainPoster.movies.map((movie, index) => (
-              <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
-                {!isPreviewMode && (
-                  <Card.Section withBorder inheritPadding py="xs">
-                    <Group position="apart">
-                      <Text weight={500}>{movie.title}</Text>
-                      <Menu withinPortal position="bottom-end" shadow="sm">
-                        <Menu.Target>
-                          <ActionIcon>
-                            <IconDots />
-                          </ActionIcon>
-                        </Menu.Target>
+            <ResponsiveGridLayout
+              className="layout"
+              breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+              isDraggable={!isPreviewMode}
+              isResizable={!isPreviewMode}
+              draggableHandle=".drag-handle"
+              cols={{
+                lg: MAX_COLS,
+                md: MAX_COLS,
+                sm: MAX_COLS,
+                xs: MAX_COLS,
+                xxs: MAX_COLS,
+              }}
+              rowHeight={ROW_HEIGHT}
+              layouts={{ lg: mainPoster.layout }}
+              onLayoutChange={(currentLayout: Layout[]) =>
+                savePosterLayout(currentLayout)
+              }
+            >
+              {mainPoster.movies.map((movie, index) => (
+                <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
+                  {!isPreviewMode && (
+                    <Card.Section withBorder inheritPadding py="xs">
+                      <Group position="apart">
+                        <Text weight={500}>{movie.title}</Text>
+                        <Menu withinPortal position="bottom-end" shadow="sm">
+                          <Menu.Target>
+                            <ActionIcon>
+                              <IconDots />
+                            </ActionIcon>
+                          </Menu.Target>
 
-                        <Menu.Dropdown>
-                          <Menu.Item
-                            icon={<IconEdit size={14} />}
-                            onClick={() => openMovieModal(movie)}
-                          >
-                            Edit
-                          </Menu.Item>
-                          <Menu.Item
-                            icon={<IconTrash size={14} />}
-                            onClick={() => removeMovie(index)}
-                          >
-                            Remove
-                          </Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
-                    </Group>
+                          <Menu.Dropdown>
+                            <Menu.Item
+                              icon={<IconEdit size={14} />}
+                              onClick={() => openMovieModal(movie)}
+                            >
+                              Edit
+                            </Menu.Item>
+                            <Menu.Item
+                              icon={<IconTrash size={14} />}
+                              onClick={() => removeMovie(index)}
+                            >
+                              Remove
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      </Group>
+                    </Card.Section>
+                  )}
+                  <Card.Section className="drag-handle">
+                    <AspectRatio ratio={2 / 3} sx={{ maxWidth: 600 }} mx="auto">
+                      {movie.poster_path && (
+                        <Image
+                          src={`https://image.tmdb.org/t/p/original/${movie.poster_path}`}
+                          alt={`${movie.title} Image`}
+                        />
+                      )}
+                    </AspectRatio>
                   </Card.Section>
-                )}
-                <Card.Section className="drag-handle">
-                  <AspectRatio ratio={2 / 3} sx={{ maxWidth: 600 }} mx="auto">
-                    <Image
-                      src={`https://image.tmdb.org/t/p/original/${movie.poster_path}`}
-                      alt={`${movie.title} Image`}
-                    />
-                  </AspectRatio>
-                </Card.Section>
-              </Card>
-            ))}
-          </ResponsiveGridLayout>
-        </div>
+                </Card>
+              ))}
+            </ResponsiveGridLayout>
+          </div>
+        </Center>
       )}
     </>
   );
