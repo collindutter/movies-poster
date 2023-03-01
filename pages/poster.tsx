@@ -11,6 +11,7 @@ import {
   Modal,
   Switch,
   Text,
+  Tooltip,
   useMantineTheme,
 } from "@mantine/core";
 import { Dropzone, FileWithPath, MIME_TYPES } from "@mantine/dropzone";
@@ -22,7 +23,7 @@ import {
   IconUpload,
   IconX,
 } from "@tabler/icons";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 
 import { getMovie, GetMovieResponse } from "@/api/movie";
@@ -198,6 +199,28 @@ export default function PosterBuilder(): React.ReactElement {
       });
   };
 
+  //resize with preserving aspect ratio
+  const handleResize = useCallback(
+    (
+      _l: Layout[],
+      oldLayoutItem: Layout,
+      layoutItem: Layout,
+      placeholder: Layout
+    ) => {
+      const heightDiff = layoutItem.h - oldLayoutItem.h;
+      const widthDiff = layoutItem.w - oldLayoutItem.w;
+      const changeCoef = oldLayoutItem.w / oldLayoutItem.h;
+      if (Math.abs(heightDiff) < Math.abs(widthDiff)) {
+        layoutItem.h = layoutItem.w / changeCoef;
+        placeholder.h = layoutItem.w / changeCoef;
+      } else {
+        layoutItem.w = layoutItem.h * changeCoef;
+        placeholder.w = layoutItem.h * changeCoef;
+      }
+    },
+    []
+  );
+
   return (
     <>
       <Modal
@@ -310,6 +333,7 @@ export default function PosterBuilder(): React.ReactElement {
               breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
               isDraggable={!isPreviewMode}
               isResizable={!isPreviewMode}
+              onResize={handleResize}
               draggableHandle=".drag-handle"
               cols={{
                 lg: MAX_COLS,
@@ -327,9 +351,17 @@ export default function PosterBuilder(): React.ReactElement {
               {mainPoster.movies.map((movie, index) => (
                 <Card key={index} shadow="sm" p="lg" radius="md" withBorder>
                   {!isPreviewMode && (
-                    <Card.Section withBorder inheritPadding py="xs">
-                      <Group position="apart">
-                        <Text weight={500}>{movie.title}</Text>
+                    <Card.Section
+                      withBorder
+                      inheritPadding
+                      py="xs"
+                    >
+                      <Group position="apart" noWrap>
+                        <Tooltip label={movie.title} position="bottom-start" withArrow multiline>
+                          <Text weight={500} truncate>
+                            {movie.title}
+                          </Text>
+                        </Tooltip>
                         <Menu withinPortal position="bottom-end" shadow="sm">
                           <Menu.Target>
                             <ActionIcon>
